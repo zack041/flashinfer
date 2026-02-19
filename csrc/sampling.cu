@@ -101,8 +101,9 @@ void sampling_from_logits(TensorView logits, TensorView output, Optional<TensorV
   });
 }
 
-void sampling_from_probs(TensorView probs, TensorView output, Optional<TensorView> maybe_indices,
-                         bool deterministic, Optional<TensorView> maybe_seed_arr, uint64_t seed_val,
+void sampling_from_probs(TensorView probs, TensorView output, TensorView valid,
+                         Optional<TensorView> maybe_indices, bool deterministic,
+                         Optional<TensorView> maybe_seed_arr, uint64_t seed_val,
                          Optional<TensorView> maybe_offset_arr, uint64_t offset_val) {
   CHECK_INPUT(probs);
   CHECK_DIM(2, probs);  // probs: (batch_size, vocab_size)
@@ -119,6 +120,7 @@ void sampling_from_probs(TensorView probs, TensorView output, Optional<TensorVie
   DISPATCH_DLPACK_IDTYPE_TO_CTYPE(output.dtype(), IdType, [&] {
     cudaError_t status = sampling::SamplingFromProb<float, IdType>(
         static_cast<float*>(probs.data_ptr()), static_cast<IdType*>(output.data_ptr()),
+        static_cast<bool*>(valid.data_ptr()),
         maybe_indices.has_value() ? static_cast<IdType*>(maybe_indices.value().data_ptr())
                                   : nullptr,
         batch_size, vocab_size, deterministic,
@@ -134,7 +136,7 @@ void sampling_from_probs(TensorView probs, TensorView output, Optional<TensorVie
   });
 }
 
-void top_p_sampling_from_probs(TensorView probs, TensorView output,
+void top_p_sampling_from_probs(TensorView probs, TensorView output, TensorView valid,
                                Optional<TensorView> maybe_indices,
                                Optional<TensorView> maybe_top_p_arr, double top_p_val,
                                bool deterministic, Optional<TensorView> maybe_seed_arr,
@@ -157,6 +159,7 @@ void top_p_sampling_from_probs(TensorView probs, TensorView output,
   DISPATCH_DLPACK_IDTYPE_TO_CTYPE(output.dtype(), IdType, [&] {
     cudaError_t status = sampling::TopPSamplingFromProb<float, IdType>(
         static_cast<float*>(probs.data_ptr()), static_cast<IdType*>(output.data_ptr()),
+        static_cast<bool*>(valid.data_ptr()),
         maybe_indices.has_value() ? static_cast<IdType*>(maybe_indices.value().data_ptr())
                                   : nullptr,
         has_top_p_arr ? static_cast<float*>(maybe_top_p_arr.value().data_ptr()) : nullptr,
@@ -173,7 +176,7 @@ void top_p_sampling_from_probs(TensorView probs, TensorView output,
   });
 }
 
-void top_k_sampling_from_probs(TensorView probs, TensorView output,
+void top_k_sampling_from_probs(TensorView probs, TensorView output, TensorView valid,
                                Optional<TensorView> maybe_indices,
                                Optional<TensorView> maybe_top_k_arr, int64_t top_k_val,
                                bool deterministic, Optional<TensorView> maybe_seed_arr,
@@ -199,6 +202,7 @@ void top_k_sampling_from_probs(TensorView probs, TensorView output,
   DISPATCH_DLPACK_IDTYPE_TO_CTYPE(output.dtype(), IdType, [&] {
     cudaError_t status = sampling::TopKSamplingFromProb<float, IdType>(
         static_cast<float*>(probs.data_ptr()), static_cast<IdType*>(output.data_ptr()),
+        static_cast<bool*>(valid.data_ptr()),
         maybe_indices.has_value() ? static_cast<IdType*>(maybe_indices.value().data_ptr())
                                   : nullptr,
         has_top_k_arr ? static_cast<float*>(maybe_top_k_arr.value().data_ptr()) : nullptr,
@@ -215,7 +219,7 @@ void top_k_sampling_from_probs(TensorView probs, TensorView output,
   });
 }
 
-void min_p_sampling_from_probs(TensorView probs, TensorView output,
+void min_p_sampling_from_probs(TensorView probs, TensorView output, TensorView valid,
                                Optional<TensorView> maybe_indices,
                                Optional<TensorView> maybe_min_p_arr, double min_p_val,
                                bool deterministic, Optional<TensorView> maybe_seed_arr,
@@ -242,7 +246,7 @@ void min_p_sampling_from_probs(TensorView probs, TensorView output,
     cudaError_t status = sampling::MinPSamplingFromProb<float, IdType>(
         static_cast<float*>(probs.data_ptr()),
         has_min_p_arr ? static_cast<float*>(maybe_min_p_arr.value().data_ptr()) : nullptr,
-        static_cast<IdType*>(output.data_ptr()),
+        static_cast<IdType*>(output.data_ptr()), static_cast<bool*>(valid.data_ptr()),
         maybe_indices.has_value() ? static_cast<IdType*>(maybe_indices.value().data_ptr())
                                   : nullptr,
         batch_size, min_p_val, vocab_size, deterministic,
@@ -258,7 +262,7 @@ void min_p_sampling_from_probs(TensorView probs, TensorView output,
   });
 }
 
-void top_k_top_p_sampling_from_probs(TensorView probs, TensorView output,
+void top_k_top_p_sampling_from_probs(TensorView probs, TensorView output, TensorView valid,
                                      Optional<TensorView> maybe_indices,
                                      Optional<TensorView> maybe_top_k_arr, double top_k_val,
                                      Optional<TensorView> maybe_top_p_arr, double top_p_val,
@@ -289,7 +293,7 @@ void top_k_top_p_sampling_from_probs(TensorView probs, TensorView output,
         static_cast<float*>(probs.data_ptr()),
         has_top_k_arr ? static_cast<IdType*>(maybe_top_k_arr.value().data_ptr()) : nullptr,
         has_top_p_arr ? static_cast<float*>(maybe_top_p_arr.value().data_ptr()) : nullptr,
-        static_cast<IdType*>(output.data_ptr()),
+        static_cast<IdType*>(output.data_ptr()), static_cast<bool*>(valid.data_ptr()),
         maybe_indices.has_value() ? static_cast<IdType*>(maybe_indices.value().data_ptr())
                                   : nullptr,
         batch_size, top_k_val, top_p_val, vocab_size, deterministic,
